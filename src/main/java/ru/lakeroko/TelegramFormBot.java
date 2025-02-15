@@ -23,12 +23,23 @@ public class TelegramFormBot implements LongPollingSingleThreadUpdateConsumer {
     @Override
     public void consume(Update update) {
         if (update.hasMessage()) {
-            if (update.getMessage().getText().equals("/start")) {
-                handlerService.handleStart(update);
-                return;
+            Message message = update.getMessage();
+            String messageText = update.getMessage().getText();
+
+            if (messageText != null){
+                if (messageText.startsWith("/start")) {
+                    String[] parts = update.getMessage().getText().split(" ");
+                    String utm = null;
+
+                    if (parts.length > 1)
+                        utm = parts[1];
+
+                    handlerService.handleStart(update, utm);
+
+                    return;
+                }
             }
 
-            Message message = update.getMessage();
             System.out.println(message.getMessageId());
             BigInteger user_id = BigInteger.valueOf(message.getFrom().getId());
 
@@ -39,6 +50,9 @@ public class TelegramFormBot implements LongPollingSingleThreadUpdateConsumer {
                         break;
                     case BIRTH_DATE:
                         handlerService.handleBirthDate(message);
+                        break;
+                    case PHOTO:
+                        handlerService.handleCompeted(message);
                         break;
                 }
             });
@@ -54,9 +68,6 @@ public class TelegramFormBot implements LongPollingSingleThreadUpdateConsumer {
                         break;
                     case GENDER:
                         handlerService.handleGender(callbackQuery);
-                        break;
-                    case COMPLETED:
-                        handlerService.handleCompeted(callbackQuery);
                         break;
                 }
             });

@@ -1,6 +1,7 @@
 package ru.lakeroko.model;
 
 import lombok.Data;
+import org.hibernate.annotations.Type;
 import ru.lakeroko.BotState;
 
 import javax.persistence.*;
@@ -41,9 +42,10 @@ public class User {
     @Column(name = "gender")
     private String gender;
 
-//    @Lob
-//    @Column(name = "photo", columnDefinition = "bytea")
-//    private byte[] photo;
+    @Lob
+    @Type(type = "org.hibernate.type.BinaryType") // Используем BinaryType
+    @Column(name = "photo", columnDefinition = "bytea")
+    private byte[] photo;
 
     @Enumerated(EnumType.STRING)
     private BotState state;

@@ -9,7 +9,7 @@ import java.math.BigInteger;
 import java.util.List;
 import java.util.Optional;
 
-public class UserDaoImpl {
+public class UserDaoImpl implements UserDAO {
 
     public static Optional<User> findById(Integer id) {
         Configuration configuration = new Configuration().addAnnotatedClass(User.class);
@@ -83,7 +83,7 @@ public class UserDaoImpl {
     }
 
 
-    public static User save(User user) {
+    public static User create(User user) {
         Configuration configuration = new Configuration().addAnnotatedClass(User.class);
 
         SessionFactory sessionFactory = configuration.buildSessionFactory();
@@ -120,7 +120,7 @@ public class UserDaoImpl {
         }
     }
 
-    public static void delete(User user) {
+        public static void delete(User user) {
         Configuration configuration = new Configuration().addAnnotatedClass(User.class);
 
         SessionFactory sessionFactory = configuration.buildSessionFactory();
