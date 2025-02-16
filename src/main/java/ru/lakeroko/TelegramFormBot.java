@@ -5,9 +5,10 @@ import org.telegram.telegrambots.longpolling.util.LongPollingSingleThreadUpdateC
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
-import org.telegram.telegrambots.meta.generics.TelegramClient;
 
 import ru.lakeroko.dao.UserDaoImpl;
+import ru.lakeroko.dto.CallbackQueryDto;
+import ru.lakeroko.dto.MessageDto;
 import ru.lakeroko.service.HandlerService;
 
 import java.math.BigInteger;
@@ -15,19 +16,20 @@ import java.math.BigInteger;
 
 public class TelegramFormBot implements LongPollingSingleThreadUpdateConsumer {
     private final HandlerService handlerService;
+    private final UserDaoImpl userDao;
 
     public TelegramFormBot(String token) {
-        this.handlerService = new HandlerService(new OkHttpTelegramClient(token));
+        this.userDao = new UserDaoImpl();
+        this.handlerService = new HandlerService(new OkHttpTelegramClient(token), userDao);
     }
 
     @Override
     public void consume(Update update) {
         if (update.hasMessage()) {
-            Message message = update.getMessage();
-            String messageText = update.getMessage().getText();
+            MessageDto messageDto = new MessageDto(update.getMessage());
 
-            if (messageText != null){
-                if (messageText.startsWith("/start")) {
+            if (messageDto.getText() != null){
+                if (messageDto.getText().startsWith("/start")) {
                     String[] parts = update.getMessage().getText().split(" ");
                     String utm = null;
 
@@ -40,34 +42,30 @@ public class TelegramFormBot implements LongPollingSingleThreadUpdateConsumer {
                 }
             }
 
-            System.out.println(message.getMessageId());
-            BigInteger user_id = BigInteger.valueOf(message.getFrom().getId());
-
-            UserDaoImpl.findByUserId(user_id).ifPresent(user -> {
+            userDao.findByUserId(messageDto.getUser_id()).ifPresent(user -> {
                 switch (user.getState()){
                     case FULL_NAME:
-                        handlerService.handleFullName(message);
+                        handlerService.handleFullName(messageDto);
                         break;
                     case BIRTH_DATE:
-                        handlerService.handleBirthDate(message);
+                        handlerService.handleBirthDate(messageDto);
                         break;
                     case PHOTO:
-                        handlerService.handleCompeted(message);
+                        handlerService.handlePhoto(messageDto);
                         break;
                 }
             });
         } else if (update.hasCallbackQuery()) {
-            CallbackQuery callbackQuery = update.getCallbackQuery();
-            BigInteger user_id = BigInteger.valueOf(callbackQuery.getFrom().getId());
+            CallbackQueryDto callbackQueryDto = new CallbackQueryDto(update.getCallbackQuery());
 
-            UserDaoImpl.findByUserId(user_id).ifPresent(user -> {
+            userDao.findByUserId(callbackQueryDto.getUser_id()).ifPresent(user -> {
                 System.out.println(user.getUserId());
                 switch (user.getState()){
                     case AGREEMENT:
-                        handlerService.handleAgreement(callbackQuery);
+                        handlerService.handleAgreement(callbackQueryDto);
                         break;
                     case GENDER:
-                        handlerService.handleGender(callbackQuery);
+                        handlerService.handleGender(callbackQueryDto);
                         break;
                 }
             });

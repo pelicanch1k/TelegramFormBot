@@ -11,91 +11,91 @@ import java.util.Optional;
 
 public class UserDaoImpl implements UserDAO {
 
-    public static Optional<User> findById(Integer id) {
+    private final SessionFactory sessionFactory;
+
+    public UserDaoImpl() {
         Configuration configuration = new Configuration().addAnnotatedClass(User.class);
-
-        SessionFactory sessionFactory = configuration.buildSessionFactory();
-        Session session = sessionFactory.getCurrentSession();
-
-        User user = null;
-
-        try {
-            session.beginTransaction();
-
-            user = session.get(User.class, id);
-
-            session.getTransaction().commit();
-
-        } finally {
-            sessionFactory.close();
-        }
-
-        return Optional.of(user);
+        this.sessionFactory = configuration.buildSessionFactory();
     }
 
-    public static Optional<User> findByUserId(BigInteger userId) {
-        Configuration configuration = new Configuration().addAnnotatedClass(User.class);
-
-        SessionFactory sessionFactory = configuration.buildSessionFactory();
+    @Override
+    public Optional<User> findById(Integer id) {
         Session session = sessionFactory.getCurrentSession();
-
         User user = null;
 
         try {
             session.beginTransaction();
-
-            // Создаем HQL-запрос для поиска пользователя по user_id
-            user = session.createQuery("from User where userId = :userId", User.class)
-                    .setParameter("userId", userId)
-                    .uniqueResult();
-
+            user = session.get(User.class, id);
             session.getTransaction().commit();
-
+        } catch (Exception e) {
+            if (session.getTransaction() != null) {
+                session.getTransaction().rollback();
+            }
+            e.printStackTrace();
         } finally {
-            sessionFactory.close();
+            session.close();
         }
 
         return Optional.ofNullable(user);
     }
 
-
-    public static List<User> findAll() {
-        Configuration configuration = new Configuration().addAnnotatedClass(User.class);
-
-        SessionFactory sessionFactory = configuration.buildSessionFactory();
+    @Override
+    public Optional<User> findByUserId(BigInteger userId) {
         Session session = sessionFactory.getCurrentSession();
+        User user = null;
 
+        try {
+            session.beginTransaction();
+            user = session.createQuery("from User where userId = :userId", User.class)
+                    .setParameter("userId", userId)
+                    .uniqueResult();
+            session.getTransaction().commit();
+        } catch (Exception e) {
+            if (session.getTransaction() != null) {
+                session.getTransaction().rollback();
+            }
+            e.printStackTrace();
+        } finally {
+            session.close();
+        }
 
+        return Optional.ofNullable(user);
+    }
+
+    @Override
+    public List<User> findAll() {
+        Session session = sessionFactory.getCurrentSession();
         List<User> users = null;
 
         try {
             session.beginTransaction();
-
             users = session.createQuery("from User", User.class).list();
-
             session.getTransaction().commit();
-
+        } catch (Exception e) {
+            if (session.getTransaction() != null) {
+                session.getTransaction().rollback();
+            }
+            e.printStackTrace();
         } finally {
-            sessionFactory.close();
+            session.close();
         }
 
         return users;
     }
 
-
-    public static User create(User user) {
-        Configuration configuration = new Configuration().addAnnotatedClass(User.class);
-
-        SessionFactory sessionFactory = configuration.buildSessionFactory();
+    @Override
+    public User create(User user) {
         Session session = sessionFactory.getCurrentSession();
-
 
         try {
             session.beginTransaction();
-
             session.save(user);
-
             session.getTransaction().commit();
+        } catch (Exception e) {
+            if (session.getTransaction() != null) {
+                session.getTransaction().rollback();
+            }
+            e.printStackTrace();
         } finally {
             session.close();
         }
@@ -103,40 +103,42 @@ public class UserDaoImpl implements UserDAO {
         return user;
     }
 
-    public static void update(User user) {
-        Configuration configuration = new Configuration().addAnnotatedClass(User.class);
-
-        SessionFactory sessionFactory = configuration.buildSessionFactory();
+    @Override
+    public void update(User user) {
         Session session = sessionFactory.getCurrentSession();
 
         try {
             session.beginTransaction();
-
             session.update(user);
-
             session.getTransaction().commit();
+        } catch (Exception e) {
+            if (session.getTransaction() != null) {
+                session.getTransaction().rollback();
+            }
+            e.printStackTrace();
         } finally {
-            sessionFactory.close();
+            session.close();
         }
     }
 
-        public static void delete(User user) {
-        Configuration configuration = new Configuration().addAnnotatedClass(User.class);
-
-        SessionFactory sessionFactory = configuration.buildSessionFactory();
+    @Override
+    public void delete(User user) {
         Session session = sessionFactory.getCurrentSession();
 
         try {
             session.beginTransaction();
-
             User newUser = session.get(User.class, user.getId());
             if (newUser != null) {
                 session.delete(user);
             }
-
             session.getTransaction().commit();
+        } catch (Exception e) {
+            if (session.getTransaction() != null) {
+                session.getTransaction().rollback();
+            }
+            e.printStackTrace();
         } finally {
-            sessionFactory.close();
+            session.close();
         }
     }
 }
