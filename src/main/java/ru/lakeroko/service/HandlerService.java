@@ -1,11 +1,11 @@
 package ru.lakeroko.service;
 
+import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.telegram.telegrambots.meta.api.methods.GetFile;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.PhotoSize;
-import org.telegram.telegrambots.meta.api.objects.Update;
-import org.telegram.telegrambots.meta.api.objects.message.Message;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow;
@@ -17,20 +17,16 @@ import ru.lakeroko.dto.MessageDto;
 import ru.lakeroko.model.User;
 import ru.lakeroko.utils.HandlerUtils;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.math.BigInteger;
-
-import java.net.URL;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.List;
 
 public class HandlerService {
+    private static final Logger logger = LoggerFactory.getLogger(HandlerService.class);
     public final HandlerUtils handlerUtils;
     private final UserDaoImpl userDao;
 
@@ -39,23 +35,26 @@ public class HandlerService {
         this.userDao = userDao;
     }
 
-    public void handleStart(Update update, String utm) {
-        Message message = update.getMessage();
+    public void handleStart(MessageDto messageDto, String utm) {
+        long chat_id = messageDto.getChat_id();
+        BigInteger user_id = messageDto.getUser_id();
 
-        long chat_id = message.getChatId();
-        BigInteger user_id = BigInteger.valueOf(message.getFrom().getId());
+        logger.info("Handling start for user_id: {}", user_id);
 
         User user = userDao.findByUserId(user_id).orElseGet(() -> {
             User newUser = new User();
             newUser.setUserId(user_id);
-            newUser.setUsername(message.getFrom().getUserName());
+            newUser.setUsername(messageDto.getUsername());
+            newUser.setUtm(utm);
 
             return userDao.create(newUser);
         });
 
-        user.setState(BotState.AGREEMENT);
+        if (utm != null && !utm.equals(user.getUtm())) {
+            handlerUtils.sendMessage(chat_id, "У вас уже есть utm метка");
+        }
 
-        user.setUtm(utm);
+        user.setState(BotState.AGREEMENT);
 
         userDao.update(user);
 
@@ -88,34 +87,51 @@ public class HandlerService {
     }
 
     public void handleFullName(MessageDto messageDto) {
+        final String LETTERS_ONLY_REGEX = "^[a-zA-Z]+$";
+
         long chat_id = messageDto.getChat_id();
         long message_id = messageDto.getMessage_id();
         String[] names = messageDto.getText().split(" ");
 
+        logger.info("Handling full name for chat_id: {}, message_id: {}", chat_id, message_id);
+
         if (names.length == 2 || names.length == 3) {
             userDao.findByUserId(messageDto.getUser_id()).ifPresent(user -> {
-                user.setState(BotState.BIRTH_DATE);
-                user.setFirstName(names[0]);
-                user.setLastName(names[1]);
+                if (names[0].matches(LETTERS_ONLY_REGEX) && names[1].matches(LETTERS_ONLY_REGEX)) {
+                    if (names.length == 3) {
+                        if (names[2].matches(LETTERS_ONLY_REGEX))
+                            user.setMiddleName(names[2]);
+                        else {
+                            handlerUtils.deleteMessage(chat_id, message_id, 2);
+                            handlerUtils.sendMessage(chat_id, "Шаг 2: Пожалуйста введите только буквы");
+                            return;
+                        }
+                    }
 
-                if (names.length == 3) {
-                    user.setMiddleName(names[2]);
+                    user.setFirstName(names[0]);
+                    user.setLastName(names[1]);
+                    user.setState(BotState.BIRTH_DATE);
+
+                    userDao.update(user);
+
+                    handlerUtils.deleteMessage(chat_id, message_id, 1);
+                    handlerUtils.sendMessage(chat_id, "Шаг 3: Введите вашу дату рождения в формате dd.MM.yyyy:");
+                } else {
+                    handlerUtils.deleteMessage(chat_id, message_id, 2);
+                    handlerUtils.sendMessage(chat_id, "Шаг 2: Пожалуйста введите только буквы");
                 }
-
-                userDao.update(user);
             });
-
-            handlerUtils.deleteMessage(chat_id, message_id, 1);
-            handlerUtils.sendMessage(chat_id, "Шаг 3: Введите вашу дату рождения в формате dd.MM.yyyy:");
         } else {
             handlerUtils.deleteMessage(chat_id, message_id, 2);
-            handlerUtils.sendMessage(chat_id, "Пожалуйста введите ваше ФИО (Отчество по желанию):");
+            handlerUtils.sendMessage(chat_id, "Шаг 2: Пожалуйста введите ваше ФИО (Отчество по желанию):");
         }
     }
 
     public void handleBirthDate(MessageDto messageDto) {
         long chat_id = messageDto.getChat_id();
         long message_id = messageDto.getMessage_id();
+
+        logger.info("Handling birth date for chat_id: {}, message_id: {}", chat_id, message_id);
 
         try {
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
@@ -143,6 +159,7 @@ public class HandlerService {
 
             handlerUtils.execute(sendMessage);
         } catch (DateTimeParseException e) {
+            logger.error("Invalid birth date format", e);
             handlerUtils.deleteMessage(chat_id, message_id, 5);
             handlerUtils.sendMessage(chat_id, "Неверный формат даты. Введите дату в формате dd.MM.yyyy.");
         }
@@ -178,10 +195,17 @@ public class HandlerService {
                     userDao.update(user);
                 });
 
-                handlerUtils.deleteMessage(messageDto.getChat_id(), messageDto.getMessage_id(), 8);
+                WordDocumentService wordDocumentService = new WordDocumentService(userDao.findByUserId(messageDto.getUser_id()).get());
+                byte[] docx = wordDocumentService.createDocx();
+
+                handlerUtils.sendDocxFile(messageDto.getChat_id(), docx, messageDto.getUsername()+".docx");
+
+                wordDocumentService.deleteDocxFile();
 
             } catch (IOException e) {
-                e.printStackTrace();
+                logger.error("Error handling photo", e);
+            } catch (InvalidFormatException e) {
+                logger.error("Invalid format exception", e);
             }
         }
     }

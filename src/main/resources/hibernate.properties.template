@@ -6,5 +6,5 @@ hibernate.connection.password=
 
 # Конфигурация самого Hibernate
 hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
-hibernate.show_sql=true
+hibernate.show_sql=false
 hibernate.current_session_context_class=thread

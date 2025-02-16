@@ -36,7 +36,7 @@ public class TelegramFormBot implements LongPollingSingleThreadUpdateConsumer {
                     if (parts.length > 1)
                         utm = parts[1];
 
-                    handlerService.handleStart(update, utm);
+                    handlerService.handleStart(messageDto, utm);
 
                     return;
                 }
@@ -59,7 +59,6 @@ public class TelegramFormBot implements LongPollingSingleThreadUpdateConsumer {
             CallbackQueryDto callbackQueryDto = new CallbackQueryDto(update.getCallbackQuery());
 
             userDao.findByUserId(callbackQueryDto.getUser_id()).ifPresent(user -> {
-                System.out.println(user.getUserId());
                 switch (user.getState()){
                     case AGREEMENT:
                         handlerService.handleAgreement(callbackQueryDto);

@@ -13,6 +13,7 @@ public class MessageDto {
     private BigInteger user_id;
     private long message_id;
     private long chat_id;
+    private String username;
     private List<PhotoSize> photos;
 
     public MessageDto(Message message) {
@@ -20,6 +21,7 @@ public class MessageDto {
         chat_id = message.getChat().getId();
         message_id = message.getMessageId();
         user_id = BigInteger.valueOf(message.getFrom().getId());
+        username = message.getFrom().getUserName();
 
         if (message.hasPhoto()){
             photos = message.getPhoto();
