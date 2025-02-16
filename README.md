@@ -9,7 +9,6 @@ TelegramFormBot is a Java-based bot designed to handle form submissions via Tele
 - [Configuration](#configuration)
 - [Running the Bot](#running-the-bot)
 - [Docker](#docker)
-- [Contributing](#contributing)
 - [License](#license)
 
 ## Prerequisites
