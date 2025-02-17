@@ -66,7 +66,7 @@ TelegramFormBot is a Java-based bot designed to handle form submissions via Tele
    gender VARCHAR(10),
    state varchar(15)
    photo BYTEA
-);
+    );
    ```
 
 ## Docker
