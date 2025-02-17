@@ -9,5 +9,5 @@ CREATE TABLE users (
    birthdate DATE,
    gender VARCHAR(10),
    state varchar(15)
---    photo BYTEA
+   photo BYTEA
 );
