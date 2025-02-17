@@ -50,7 +50,7 @@ TelegramFormBot is a Java-based bot designed to handle form submissions via Tele
     java -cp . Main.java
     ```
 
-## Run the code in the src/main/resources/schema.sql file
+## Run the code in src/main/resources/schema.sql
 
 1. Run this code:
    ```sql
